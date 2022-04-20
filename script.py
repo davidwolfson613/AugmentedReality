@@ -4,7 +4,7 @@ import numpy as np
 def get_corners_list(image):
 
     """
-    Get image corner coordinates used in warping.
+    This function gets the image corner coordinates used in warping.
     """
 
     height, width = image.shape[:2]
@@ -14,7 +14,11 @@ def get_corners_list(image):
 
 
 def video_frame_generator(filename):
-
+    
+    '''
+    This function yields frames from a video one at a time
+    '''
+    
     # Open file with VideoCapture and set result to 'video'
     video = cv2.VideoCapture(filename)
     
