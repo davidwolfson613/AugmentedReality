@@ -13,15 +13,12 @@ def get_corners_list(image):
     return corners
 
 
-def video_frame_generator(filename):
-    
+def video_frame_generator(video):
+
     '''
-    This function yields frames from a video one at a time
+    This function creates a generator that yields frames from a video capture object one at a time
     '''
-    
-    # Open file with VideoCapture and set result to 'video'
-    video = cv2.VideoCapture(filename)
-    
+
     # yield frames, one at a time, until no more frames in video
     while video.isOpened():
 
@@ -38,15 +35,15 @@ def video_frame_generator(filename):
     yield None
 
 
-def find_markers(image, template=None):
+def find_markers(image):
 
     """
-    Find corner markers in an image
+    This function finds corner markers in an image
     """
 
     # USING CORNER DETECTOR WITH KMEANS CLUSTERING
     img = np.copy(image)
-    
+
     # need to convert image to grayscale then apply gaussian blur before passing the image to harris corner function
     gray_img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
     blur_img = cv2.GaussianBlur(gray_img,(11,11),0)
@@ -58,6 +55,7 @@ def find_markers(image, template=None):
     '''
     A lot of the coordinates in the corners array are very similar, so use kmeans clustering to find the best corners
     '''
+
     # define criteria and apply kmeans (criteria taken from OpenCV docs)
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
     _,_,centers=cv2.kmeans(corners,K=4,bestLabels=None,criteria=criteria,attempts=100,flags=cv2.KMEANS_RANDOM_CENTERS)
@@ -98,7 +96,6 @@ def project_images(imageA, imageB, homography):
 
     # create coord map for dest image for backward warping
     y,x = np.indices((h,w))
-    # print(y)
     coords = np.array([x.ravel(),y.ravel(),np.ones_like(x).ravel()])
 
     # do the warp
@@ -114,12 +111,6 @@ def project_images(imageA, imageB, homography):
     out_image = cv2.remap(src,warp_x,warp_y,cv2.INTER_LINEAR,dst=out_image,borderMode=cv2.BORDER_TRANSPARENT)
     out_image = np.uint8(out_image)
 
-    # had black background instead of wall, tried using mask, didn't work
-    # ind = np.where(out_image==(0,0,0)) # comment out this line for all parts other than part 5
-    # print(ind)
-    # exit()
-    # out_image[ind] = src[ind] # comment out this line for all parts other than part 5
-
     return out_image
 
 
@@ -129,10 +120,10 @@ def find_homography(srcPoints, dstPoints):
     This function performs a perspective transform on the provided points in the source and destination images.
 
     """
-       
+
     # initialize the transform matrix to all zeros
     A = np.zeros((len(srcPoints)*2,9))
-    
+
     # loop through source points and populate transform matrix
     for i in range(len(srcPoints)):
         for j in range(2):
@@ -150,32 +141,46 @@ def find_homography(srcPoints, dstPoints):
 
 if __name__ == '__main__':
 
-    filepath = r'.\wall.mp4'
-    frames = video_frame_generator(filepath)
+    filepath = r'to_use\wall.mp4'
 
+    # Open file with VideoCapture and set result to 'video'
+    video = cv2.VideoCapture(filepath)
+
+    #get number of frames
+    num_frames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    # get video frame generator
+    frames = video_frame_generator(video)
+
+    # get shape of a frame for writing to output video
     frame = frames.__next__()
     h,w,_ = frame.shape
-    # print(h,w)
-    # cv2.imshow('hey',frame)
-    # cv2.waitKey(0)
-    # exit()
 
+    # create output video write
     fourcc = cv2.VideoWriter_fourcc(*'MP4V')
     out_vid = cv2.VideoWriter('output.mp4', fourcc, 40, (w,h))
 
-    flag_img = cv2.imread(r'.\flag.png')
+    flag_img = cv2.imread(r'to_use\flag.png')
     src_points = get_corners_list(flag_img)
 
     num = 0
     while frame is not None:
 
-        print('Processing frame {}'.format(num))
+        # calculate progress
+        pct_complete = '{:.2%}'.format(num/num_frames)
+        print(pct_complete, end='\r')
+
+        # perform the projection
         markers = find_markers(frame)
         homography = find_homography(src_points,markers)
         out_img = project_images(flag_img,frame,homography)
 
+        # write projected image to output video
         out_vid.write(out_img)
         num += 1
+
+        # get next frame
         frame = frames.__next__()
 
+    print('100.00%',end='\r')
     out_vid.release()
