@@ -7,4 +7,8 @@ The code can be run locally by cloning this repo, going into this directory and 
 
     python script.py
 
+In order to install all the required packages, run the following command from the command line:
+
+    pip install -r requirements.txt
+
 NOTE: The filepaths are all relative, so be sure to keep the "wall.mp4" and "flag.png" files in the "to_use" directory. As mentioned above, if you would like to apply augmented reality to different files, please make the relevant changes to the file paths in the "script.py" file.
